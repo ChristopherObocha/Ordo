@@ -1,3 +1,4 @@
+# add to .gitignore
 
 node_modules/
 .env.local
@@ -8,3 +9,8 @@ dist/
 .expo/
 .claude/
 .agents/
+backend/
+convex/_generated/
+*.pyc
+__pycache__/
+skills-lock.json
