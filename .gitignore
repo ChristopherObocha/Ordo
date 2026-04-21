@@ -1,0 +1,10 @@
+
+node_modules/
+.env.local
+.env
+.convex/
+.next/
+dist/
+.expo/
+.claude/
+.agents/
