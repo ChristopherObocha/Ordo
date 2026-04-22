@@ -12,12 +12,17 @@ export const { auth, signIn, signOut, store } = convexAuth({
     Email({
       id: "resend-otp",
       apiKey: process.env.AUTH_RESEND_KEY,
+      maxAge: 60 * 15, // 15 minutes
+      async generateVerificationToken() {
+        return Math.floor(100000 + Math.random() * 900000).toString(); // 6 digit code
+      },
       async sendVerificationRequest({ identifier: email, url, token }) {
+        // console.log(`OTP for ${email}: ${token}`);
         await resend.emails.send({
           from: process.env.AUTH_RESEND_OTP_EMAIL ?? "onboarding@resend.dev",
           to: email,
           subject: "Your Ordo sign in code",
-          text: `Your Ordo verification code is: ${token}\n\nOr click this link: ${url}`,
+          text: `Your Ordo verification code is: ${token}`,
         });
       },
     }),
