@@ -48,8 +48,8 @@ export const invite = mutation({
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .first();
 
-    if (!membership || membership.role !== "parish_priest") {
-      throw new Error("Only the parish priest can invite clergy");
+    if (!membership || (membership.role !== "parish_priest" && membership.role !== "administrator")) {
+      throw new Error("Only the parish priest or administrator can invite clergy");
     }
 
     // Check not already invited

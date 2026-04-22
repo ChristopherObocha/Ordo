@@ -16,6 +16,7 @@ export const create = mutation({
     diocese: v.optional(v.string()),
     locale: v.string(),
     timezone: v.string(),
+    membershipRole: v.optional(v.union(v.literal("parish_priest"), v.literal("administrator"))),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -35,11 +36,11 @@ export const create = mutation({
       isMain: true,
     });
 
-    // Make this user the parish priest
+    // Make this user the parish priest (or administrator if specified)
     await ctx.db.insert("parishMembers", {
       parishId,
       userId,
-      role: "parish_priest",
+      role: args.membershipRole ?? "parish_priest",
     });
 
     return parishId;

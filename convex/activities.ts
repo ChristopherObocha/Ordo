@@ -32,7 +32,7 @@ const liturgicalColourValidator = v.union(
   v.literal("black"),
 );
 
-async function assertParishPriest(
+async function assertPrivileged(
   ctx: MutationCtx | QueryCtx,
   parishId: Id<"parishes">,
 ) {
@@ -43,8 +43,8 @@ async function assertParishPriest(
     .withIndex("by_parish", (q) => q.eq("parishId", parishId))
     .filter((q) => q.eq(q.field("userId"), userId))
     .unique();
-  if (!membership || membership.role !== "parish_priest")
-    throw new Error("Unauthorised: parish priest role required");
+  if (!membership || (membership.role !== "parish_priest" && membership.role !== "administrator"))
+    throw new Error("Unauthorised: admin or parish priest role required");
   return userId;
 }
 
@@ -92,7 +92,7 @@ export const create = mutation({
     notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await assertParishPriest(ctx, args.parishId);
+    await assertPrivileged(ctx, args.parishId);
 
     const church = await ctx.db.get(args.churchId);
     if (!church || church.parishId !== args.parishId)
@@ -129,7 +129,7 @@ export const update = mutation({
     const activity = await ctx.db.get(activityId);
     if (!activity) throw new Error("Activity not found");
 
-    await assertParishPriest(ctx, activity.parishId);
+    await assertPrivileged(ctx, activity.parishId);
 
     if (fields.churchId) {
       const church = await ctx.db.get(fields.churchId);
@@ -153,7 +153,7 @@ export const deactivate = mutation({
     const activity = await ctx.db.get(args.activityId);
     if (!activity) throw new Error("Activity not found");
 
-    await assertParishPriest(ctx, activity.parishId);
+    await assertPrivileged(ctx, activity.parishId);
     await ctx.db.patch(args.activityId, { isActive: false });
     return args.activityId;
   },
@@ -165,7 +165,7 @@ export const remove = mutation({
     const activity = await ctx.db.get(args.activityId);
     if (!activity) throw new Error("Activity not found");
 
-    await assertParishPriest(ctx, activity.parishId);
+    await assertPrivileged(ctx, activity.parishId);
 
     const existingAssignment = await ctx.db
       .query("assignments")
