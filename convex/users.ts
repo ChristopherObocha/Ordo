@@ -38,6 +38,36 @@ export const ensureUser = mutation({
   },
 });
 
+// Update onboarding phase and step for the current user
+export const updateOnboardingProgress = mutation({
+  args: {
+    phase: v.union(
+      v.literal("setup"),
+      v.literal("import"),
+      v.literal("generate"),
+      v.literal("complete"),
+    ),
+    step: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+    await ctx.db.patch(userId, { onboardingPhase: args.phase, onboardingStep: args.step });
+  },
+});
+
+// Get onboarding progress for the current user
+export const getOnboardingProgress = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return null;
+    const user = await ctx.db.get(userId);
+    if (!user) return null;
+    return { phase: user.onboardingPhase, step: user.onboardingStep };
+  },
+});
+
 // Get a user's role within a parish
 export const getParishRole = query({
   args: { parishId: v.id("parishes") },

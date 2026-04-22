@@ -1,27 +1,51 @@
 "use client";
+import { useEffect } from "react";
 import { useQuery } from "convex/react";
-import { useAuthActions } from "@convex-dev/auth/react";
 import { api } from "../../../../convex/_generated/api";
 import { useRouter } from "next/navigation";
 
+const C = { bg: "var(--ordo-bg)", text: "var(--ordo-text)", muted: "var(--ordo-muted)" };
+const SANS = "var(--font-dm-sans), sans-serif";
+
 export default function Home() {
-  const { signOut } = useAuthActions();
   const router = useRouter();
   const user = useQuery(api.users.getCurrentUser);
+  const parish = useQuery(api.parishes.getMyParish);
 
-  if (user === undefined) return <p>Loading...</p>;
-  if (user === null) return <p>Not logged in</p>;
+  useEffect(() => {
+    if (user === undefined || parish === undefined) return;
+
+    if (user === null) {
+      router.replace("/signin");
+      return;
+    }
+
+    const phase = user.onboardingPhase;
+
+    if (!parish || phase !== "complete") {
+      if (phase === "import" || phase === "generate") {
+        router.replace(`/onboarding?phase=${phase}`);
+      } else {
+        router.replace("/onboarding");
+      }
+      return;
+    }
+
+    router.replace("/dashboard/rota");
+  }, [user, parish, router]);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen gap-4">
-      <h1 className="text-2xl font-bold">Welcome to Ordo</h1>
-      <p className="text-gray-500">Signed in as {user.email}</p>
-      <button
-        onClick={() => signOut().then(() => router.push("/signin"))}
-        className="px-6 py-3 bg-black text-white rounded-lg"
-      >
-        Sign out
-      </button>
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        minHeight: "100vh",
+        backgroundColor: C.bg,
+        fontFamily: SANS,
+      }}
+    >
+      <p style={{ color: C.muted, fontSize: "0.95rem" }}>Loading…</p>
     </div>
   );
 }
