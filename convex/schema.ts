@@ -8,7 +8,7 @@ export default defineSchema({
 
   // --- USERS ---
   users: defineTable({
-    name: v.string(),
+    name: v.optional(v.string()),
     email: v.string(),
     imageUrl: v.optional(v.string()),
   }).index("by_email", ["email"]),
