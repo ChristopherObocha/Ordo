@@ -117,34 +117,43 @@ export default defineSchema({
   activities: defineTable({
     parishId: v.id("parishes"),
     churchId: v.id("churches"),
-    title: v.string(),
     type: v.union(
       v.literal("mass"),
-      v.literal("confession"),
+      v.literal("confessions"),
+      v.literal("exposition"),
+      v.literal("evening_prayer"),
       v.literal("baptism"),
-      v.literal("funeral"),
-      v.literal("wedding"),
-      v.literal("hospital_visit"),
       v.literal("vespers"),
       v.literal("other"),
     ),
-    startTime: v.string(),
-    durationMins: v.number(),
-    requiredRole: v.optional(v.string()),
-    requiredType: v.optional(v.string()),
-    isVigil: v.boolean(),
-    recurrence: v.union(
-      v.literal("none"),
-      v.literal("weekly"),
-      v.literal("monthly"),
+    name: v.optional(v.string()),
+    schedule: v.union(
+      v.literal("weekday"),
+      v.literal("saturday"),
+      v.literal("sunday"),
+      v.literal("vigil"),
+      v.literal("specific"),
     ),
-    recurrenceDays: v.optional(v.array(v.number())),
-    recurrenceEnds: v.optional(v.string()),
-    liturgicalDate: v.optional(v.string()),
-    liturgicalSeason: v.optional(v.string()),
-    liturgicalRank: v.optional(v.number()),
-  }).index("by_parish", ["parishId"])
-    .index("by_church", ["churchId"]),
+    time: v.string(),
+    specificDate: v.optional(v.number()),
+    isVigil: v.boolean(),
+    liturgicalColour: v.optional(v.union(
+      v.literal("white"),
+      v.literal("red"),
+      v.literal("green"),
+      v.literal("purple"),
+      v.literal("rose"),
+      v.literal("marian_white"),
+      v.literal("black"),
+    )),
+    requiredClergyCount: v.number(),
+    requiredRoles: v.array(v.string()),
+    notes: v.optional(v.string()),
+    isActive: v.boolean(),
+  })
+    .index("by_parish", ["parishId"])
+    .index("by_church", ["churchId"])
+    .index("by_parish_schedule", ["parishId", "schedule"]),
 
   // --- ROTAS ---
   rotas: defineTable({
