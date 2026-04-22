@@ -1,11 +1,8 @@
 "use client";
-
-// NOTE (DONE_WITH_CONCERNS): convex/churches.ts only exposes a `list` query —
-// no `create` or `updateMainChurchName` mutations exist yet.
-// Satellite-church saves and main-church-name updates are intentionally skipped
-// here; the orchestrating page.tsx will wire those up once the mutations land.
-
 import { useState } from "react";
+import { useMutation } from "convex/react";
+import { api } from "../../../../../convex/_generated/api";
+import { Id } from "../../../../../convex/_generated/dataModel";
 import {
   C, SANS,
   OInput, OSelect, Field, StepHeader, StepNav, OButton,
@@ -14,7 +11,7 @@ import {
 type Props = {
   parishId: string;
   parishName: string;
-  onNext: () => void;
+  onNext: (mainChurchName: string) => void;
   onBack: () => void;
 };
 
@@ -36,6 +33,8 @@ function uid() { return `sat-${++_counter}-${Math.random().toString(36).slice(2)
 export function StepChurches({ parishId, parishName, onNext, onBack }: Props) {
   const [mainChurchName, setMainChurchName] = useState(parishName);
   const [satellites, setSatellites] = useState<SatelliteInput[]>([]);
+  const [saving, setSaving] = useState(false);
+  const createChurch = useMutation(api.churches.create);
 
   const addSatellite = () => {
     setSatellites((prev) => [
@@ -54,10 +53,21 @@ export function StepChurches({ parishId, parishName, onNext, onBack }: Props) {
     );
   };
 
-  const handleNext = () => {
-    // Mutations for saving churches are not yet available in convex/churches.ts.
-    // The orchestrating page should persist these values after mutations are added.
-    onNext();
+  const handleNext = async () => {
+    setSaving(true);
+    try {
+      for (const sat of satellites.filter((s) => s.name.trim())) {
+        await createChurch({
+          parishId: parishId as Id<"parishes">,
+          name: sat.name.trim(),
+          type: sat.type,
+          isMain: false,
+        });
+      }
+      onNext(mainChurchName);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -168,6 +178,7 @@ export function StepChurches({ parishId, parishName, onNext, onBack }: Props) {
         onNext={handleNext}
         onBack={onBack}
         canNext={mainChurchName.trim().length > 0}
+        loading={saving}
         nextLabel="Continue →"
       />
     </div>

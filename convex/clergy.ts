@@ -108,6 +108,68 @@ export const acceptInvite = mutation({
   },
 });
 
+export const addDuringOnboarding = mutation({
+  args: {
+    parishId: v.id("parishes"),
+    name: v.string(),
+    type: v.union(
+      v.literal("bishop"),
+      v.literal("priest"),
+      v.literal("deacon"),
+      v.literal("religious"),
+      v.literal("sister"),
+    ),
+    roles: v.array(v.string()),
+    email: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+    return await ctx.db.insert("clergy", {
+      parishId: args.parishId,
+      name: args.name,
+      type: args.type,
+      roles: args.roles,
+      email: args.email,
+      status: "active",
+    });
+  },
+});
+
+export const addSelf = mutation({
+  args: {
+    parishId: v.id("parishes"),
+    type: v.union(
+      v.literal("bishop"),
+      v.literal("priest"),
+      v.literal("deacon"),
+      v.literal("religious"),
+      v.literal("sister"),
+    ),
+    roles: v.array(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+    const user = await ctx.db.get(userId);
+    if (!user) throw new Error("User not found");
+    const existing = await ctx.db
+      .query("clergy")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .first();
+    if (existing) return existing._id;
+    return await ctx.db.insert("clergy", {
+      parishId: args.parishId,
+      userId,
+      name: user.name ?? user.email,
+      type: args.type,
+      roles: args.roles,
+      email: user.email,
+      status: "active",
+    });
+  },
+});
+
 export const remove = mutation({
   args: { clergyId: v.id("clergy") },
   handler: async (ctx, args) => {

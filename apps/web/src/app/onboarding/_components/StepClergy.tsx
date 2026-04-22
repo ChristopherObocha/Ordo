@@ -1,13 +1,8 @@
 "use client";
-
-// NOTE (DONE_WITH_CONCERNS): `api.clergy.addDuringOnboarding` does not exist yet.
-// The closest available mutation is `api.clergy.invite`, which requires an email
-// address. During onboarding we may not have emails for all clergy, so saves for
-// additional clergy rows are intentionally skipped until the new mutation lands.
-// The UI is fully implemented; the orchestrating page.tsx should call the new
-// mutation once it is added to convex/clergy.ts.
-
 import { useState } from "react";
+import { useMutation } from "convex/react";
+import { api } from "../../../../../convex/_generated/api";
+import { Id } from "../../../../../convex/_generated/dataModel";
 import {
   C, SANS,
   OInput, OSelect, Field, StepHeader, StepNav, OButton,
@@ -57,6 +52,8 @@ export function StepClergy({
   onBack,
 }: Props) {
   const [rows, setRows] = useState<ClergyRow[]>([]);
+  const [saving, setSaving] = useState(false);
+  const addDuringOnboarding = useMutation(api.clergy.addDuringOnboarding);
 
   const addRow = () => {
     setRows((prev) => [
@@ -75,11 +72,21 @@ export function StepClergy({
     );
   };
 
-  const handleNext = () => {
-    // api.clergy.addDuringOnboarding does not exist yet — skip saves.
-    // When the mutation is available, iterate `rows` where name.trim() !== ""
-    // and call: addDuringOnboarding({ parishId, name, type, roles: roles.split(",").map(s=>s.trim()).filter(Boolean) })
-    onNext();
+  const handleNext = async () => {
+    setSaving(true);
+    try {
+      for (const row of rows.filter((r) => r.name.trim())) {
+        await addDuringOnboarding({
+          parishId: parishId as Id<"parishes">,
+          name: row.name.trim(),
+          type: row.type,
+          roles: row.roles.split(",").map((s) => s.trim()).filter(Boolean),
+        });
+      }
+      onNext();
+    } finally {
+      setSaving(false);
+    }
   };
 
   const divider: React.CSSProperties = {
@@ -202,6 +209,7 @@ export function StepClergy({
         onNext={handleNext}
         onBack={onBack}
         canNext={true}
+        loading={saving}
         nextLabel="Continue →"
       />
     </div>
