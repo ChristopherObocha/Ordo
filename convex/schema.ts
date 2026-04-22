@@ -11,6 +11,13 @@ export default defineSchema({
     name: v.optional(v.string()),
     email: v.string(),
     imageUrl: v.optional(v.string()),
+    onboardingPhase: v.optional(v.union(
+      v.literal("setup"),
+      v.literal("import"),
+      v.literal("generate"),
+      v.literal("complete"),
+    )),
+    onboardingStep: v.optional(v.number()),
   }).index("by_email", ["email"]),
 
   // --- PARISHES ---
@@ -69,7 +76,7 @@ export default defineSchema({
     parishId: v.id("parishes"),
     userId: v.optional(v.id("users")),
     name: v.string(),
-    email: v.string(),
+    email: v.optional(v.string()),
     type: v.union(
       v.literal("bishop"),
       v.literal("priest"),
@@ -205,6 +212,14 @@ export default defineSchema({
     enabled: v.boolean(),
     createdBy: v.id("users"),
   }).index("by_parish", ["parishId"]),
+
+  // --- ROTA SHARES ---
+  rotaShares: defineTable({
+    rotaId: v.id("rotas"),
+    token: v.string(),
+    expiresAt: v.optional(v.number()),
+    createdBy: v.id("users"),
+  }).index("by_token", ["token"]),
 
   // --- LITURGICAL CACHE ---
   liturgicalCache: defineTable({
