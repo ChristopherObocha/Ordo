@@ -1,5 +1,5 @@
 "use client";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useAction } from "convex/react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { api } from "../../../../../../convex/_generated/api";
 import { Id } from "../../../../../../convex/_generated/dataModel";
@@ -39,6 +39,39 @@ function activityAppliesToDay(schedule: string, dayOfWeek: number): boolean {
     case "vigil": return dayOfWeek === 6;
     default: return false;
   }
+}
+
+// ─── Range helpers ────────────────────────────────────────────────────────────
+
+type RangeMode = "week" | "1m" | "3m" | "6m" | "eoy";
+
+function addMonths(d: Date, n: number): Date {
+  const result = new Date(d);
+  result.setMonth(d.getMonth() + n);
+  return result;
+}
+
+function computeRange(mode: RangeMode, today: Date): { startDate: string; endDate: string } {
+  const start = new Date(today);
+  start.setHours(0, 0, 0, 0);
+  let end: Date;
+  switch (mode) {
+    case "1m":
+      end = addMonths(start, 1);
+      break;
+    case "3m":
+      end = addMonths(start, 3);
+      break;
+    case "6m":
+      end = addMonths(start, 6);
+      break;
+    case "eoy":
+      end = new Date(start.getFullYear(), 11, 31);
+      break;
+    default:
+      end = addDays(start, 6);
+  }
+  return { startDate: isoDate(start), endDate: isoDate(end) };
 }
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
@@ -280,6 +313,373 @@ function AssignModal({
   );
 }
 
+// ─── Monthly view ─────────────────────────────────────────────────────────────
+
+function MonthlyView({
+  parishId,
+  startDate,
+  endDate,
+  onSelectWeek,
+}: {
+  parishId: Id<"parishes">;
+  startDate: string;
+  endDate: string;
+  onSelectWeek: (sunday: Date) => void;
+}) {
+  const rotas = useQuery(api.rotas.getForRange, { parishId, startDate, endDate });
+
+  // Build a list of weeks spanning the range, starting from the Sunday of startDate.
+  const weeks = useMemo(() => {
+    const start = new Date(startDate + "T00:00:00");
+    const end = new Date(endDate + "T00:00:00");
+    const firstSunday = getSundayOfWeek(start);
+    const list: { sunday: Date; monthKey: string }[] = [];
+    let cursor = new Date(firstSunday);
+    while (cursor <= end) {
+      list.push({
+        sunday: new Date(cursor),
+        monthKey: `${cursor.getFullYear()}-${cursor.getMonth()}`,
+      });
+      cursor = addDays(cursor, 7);
+    }
+    return list;
+  }, [startDate, endDate]);
+
+  // Group weeks by month
+  const weeksByMonth = useMemo(() => {
+    const groups = new Map<string, { label: string; weeks: { sunday: Date }[] }>();
+    for (const w of weeks) {
+      const label = w.sunday.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+      if (!groups.has(w.monthKey)) {
+        groups.set(w.monthKey, { label, weeks: [] });
+      }
+      groups.get(w.monthKey)!.weeks.push({ sunday: w.sunday });
+    }
+    return Array.from(groups.values());
+  }, [weeks]);
+
+  // Map rota startDate -> rota doc for quick lookup
+  const rotaByStart = useMemo(() => {
+    const m = new Map<string, { _id: Id<"rotas">; status: string }>();
+    for (const r of rotas ?? []) {
+      m.set(r.startDate, { _id: r._id, status: r.status });
+    }
+    return m;
+  }, [rotas]);
+
+  if (rotas === undefined) {
+    return (
+      <div style={{ padding: 24, color: C.muted, fontFamily: SANS, fontSize: 13 }}>
+        Loading range…
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ padding: "20px 24px", maxWidth: 720, margin: "0 auto" }}>
+      {weeksByMonth.map((group) => (
+        <div key={group.label} style={{ marginBottom: 28 }}>
+          <h2
+            style={{
+              fontFamily: SERIF,
+              fontSize: 20,
+              fontWeight: 500,
+              color: C.text,
+              margin: "0 0 12px 0",
+            }}
+          >
+            {group.label}
+          </h2>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              background: C.surface,
+              border: `1px solid ${C.border}`,
+              borderRadius: 8,
+              overflow: "hidden",
+            }}
+          >
+            {group.weeks.map(({ sunday }, idx) => {
+              const key = isoDate(sunday);
+              const rotaEntry = rotaByStart.get(key);
+              return (
+                <button
+                  key={key}
+                  onClick={() => onSelectWeek(sunday)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "12px 16px",
+                    border: "none",
+                    borderTop: idx === 0 ? "none" : `1px solid ${C.border}`,
+                    background: C.surface,
+                    cursor: "pointer",
+                    fontFamily: SANS,
+                    textAlign: "left",
+                    transition: "background 0.12s",
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = C.surface2)}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = C.surface)}
+                >
+                  <span style={{ fontSize: 13, color: C.text, fontWeight: 500 }}>
+                    Week of {formatWeekRange(sunday)}
+                  </span>
+                  <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    {rotaEntry ? (
+                      <span
+                        style={{
+                          fontSize: 11,
+                          padding: "2px 8px",
+                          borderRadius: 10,
+                          background:
+                            rotaEntry.status === "published" ? C.successBg : C.surface2,
+                          color:
+                            rotaEntry.status === "published" ? C.success : C.muted,
+                          textTransform: "capitalize",
+                          fontWeight: 500,
+                        }}
+                      >
+                        {rotaEntry.status}
+                      </span>
+                    ) : (
+                      <span style={{ fontSize: 11, color: C.faint }}>No rota</span>
+                    )}
+                    <span style={{ color: C.faint, fontSize: 14 }}>›</span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+      {weeksByMonth.length === 0 && (
+        <div style={{ color: C.muted, fontFamily: SANS, fontSize: 13, textAlign: "center", padding: 40 }}>
+          No weeks in range.
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Generate modal ───────────────────────────────────────────────────────────
+
+function GenerateModal({
+  open,
+  parishId,
+  onClose,
+}: {
+  open: boolean;
+  parishId: Id<"parishes">;
+  onClose: () => void;
+}) {
+  const today = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, []);
+  const defaultEnd = useMemo(() => addMonths(today, 3), [today]);
+
+  const [startDate, setStartDate] = useState<string>(isoDate(today));
+  const [endDate, setEndDate] = useState<string>(isoDate(defaultEnd));
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const overlapRotas = useQuery(
+    api.rotas.getForRange,
+    open ? { parishId, startDate, endDate } : "skip",
+  );
+  const hasPublishedOverlap = (overlapRotas ?? []).some((r) => r.status === "published");
+
+  const generate = useAction(api.rotaGeneration.generateRota);
+
+  if (!open) return null;
+
+  const onGenerate = async () => {
+    setError(null);
+    setLoading(true);
+    try {
+      await generate({ parishId, startDate, endDate });
+      setLoading(false);
+      onClose();
+    } catch (e) {
+      setLoading(false);
+      setError(e instanceof Error ? e.message : "Failed to generate rota");
+    }
+  };
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(44,42,39,0.35)",
+        zIndex: 200,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+      onClick={() => {
+        if (!loading) onClose();
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: C.surface,
+          borderRadius: 10,
+          padding: 32,
+          maxWidth: 480,
+          width: "100%",
+          boxShadow: "var(--ordo-shadow-lg)",
+          margin: "0 16px",
+        }}
+      >
+        <h3
+          style={{
+            margin: "0 0 20px 0",
+            fontFamily: SERIF,
+            fontSize: 22,
+            fontWeight: 500,
+            color: C.text,
+          }}
+        >
+          Generate rota
+        </h3>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 18 }}>
+          <label style={{ display: "flex", flexDirection: "column", gap: 4, fontFamily: SANS }}>
+            <span style={{ fontSize: 12, fontWeight: 500, color: C.muted }}>Start date</span>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              disabled={loading}
+              style={{
+                fontFamily: SANS,
+                fontSize: 14,
+                padding: "8px 10px",
+                border: `1px solid ${C.border}`,
+                borderRadius: 6,
+                background: C.surface,
+                color: C.text,
+              }}
+            />
+          </label>
+          <label style={{ display: "flex", flexDirection: "column", gap: 4, fontFamily: SANS }}>
+            <span style={{ fontSize: 12, fontWeight: 500, color: C.muted }}>End date</span>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              disabled={loading}
+              style={{
+                fontFamily: SANS,
+                fontSize: 14,
+                padding: "8px 10px",
+                border: `1px solid ${C.border}`,
+                borderRadius: 6,
+                background: C.surface,
+                color: C.text,
+              }}
+            />
+          </label>
+        </div>
+
+        <div
+          style={{
+            background: C.surface2,
+            borderRadius: 6,
+            padding: "10px 14px",
+            fontFamily: SANS,
+            fontSize: 12,
+            color: C.muted,
+            marginBottom: 12,
+            display: "flex",
+            flexDirection: "column",
+            gap: 4,
+          }}
+        >
+          <span>All active activities will be included</span>
+          <span>All active clergy will be assigned</span>
+        </div>
+
+        {hasPublishedOverlap && (
+          <div
+            style={{
+              background: C.warningBg,
+              border: `1px solid ${C.warning}`,
+              borderRadius: 6,
+              padding: "10px 14px",
+              fontFamily: SANS,
+              fontSize: 12,
+              color: C.warning,
+              marginBottom: 12,
+            }}
+          >
+            This will overwrite published assignments for part of this range.
+          </div>
+        )}
+
+        {error && (
+          <div
+            style={{
+              background: C.dangerBg,
+              border: `1px solid ${C.danger}`,
+              borderRadius: 6,
+              padding: "10px 14px",
+              fontFamily: SANS,
+              fontSize: 12,
+              color: C.danger,
+              marginBottom: 12,
+            }}
+          >
+            {error}
+          </div>
+        )}
+
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 18 }}>
+          <button
+            onClick={onClose}
+            disabled={loading}
+            style={{
+              padding: "8px 16px",
+              borderRadius: 6,
+              border: `1px solid ${C.border}`,
+              background: C.surface,
+              color: C.muted,
+              fontFamily: SANS,
+              fontSize: 13,
+              cursor: loading ? "not-allowed" : "pointer",
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onGenerate}
+            disabled={loading}
+            style={{
+              padding: "8px 18px",
+              borderRadius: 6,
+              border: "none",
+              background: C.primary,
+              color: "#fff",
+              fontFamily: SANS,
+              fontSize: 13,
+              fontWeight: 500,
+              cursor: loading ? "not-allowed" : "pointer",
+              opacity: loading ? 0.7 : 1,
+            }}
+          >
+            {loading ? "Generating…" : "Generate"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function RotaPage() {
@@ -289,6 +689,10 @@ export default function RotaPage() {
   const [modalCell, setModalCell] = useState<{ activityId: Id<"activities">; date: string; activityName: string } | null>(null);
   const [dragSrc, setDragSrc] = useState<{ activityId: Id<"activities">; date: string; clergyId: Id<"clergy"> } | null>(null);
   const [dragOver, setDragOver] = useState<{ activityId: Id<"activities">; date: string } | null>(null);
+  const [rangeMode, setRangeMode] = useState<RangeMode>("3m");
+  const [generateOpen, setGenerateOpen] = useState(false);
+
+  const rangeDates = useMemo(() => computeRange(rangeMode, new Date()), [rangeMode]);
 
   const parish   = useQuery(api.parishes.getMyParish);
   const churches = useQuery(api.churches.list, parish ? { parishId: parish._id } : "skip");
@@ -384,8 +788,54 @@ export default function RotaPage() {
 
   const dayDateForIndex = (i: number) => isoDate(weekDays[i]);
 
+  const rangePills: { mode: RangeMode; label: string }[] = [
+    { mode: "week", label: "Week" },
+    { mode: "1m", label: "1 month" },
+    { mode: "3m", label: "3 months" },
+    { mode: "6m", label: "6 months" },
+    { mode: "eoy", label: "End of year" },
+  ];
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden", position: "relative" }}>
+      {/* Range toggle */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          flexWrap: "wrap",
+          padding: "10px 20px",
+          background: C.surface,
+          borderBottom: `1px solid ${C.border}`,
+          flexShrink: 0,
+        }}
+      >
+        {rangePills.map((p) => {
+          const selected = rangeMode === p.mode;
+          return (
+            <button
+              key={p.mode}
+              onClick={() => setRangeMode(p.mode)}
+              style={{
+                background: selected ? C.primary : C.surface,
+                color: selected ? "#fff" : C.muted,
+                border: selected ? `1px solid ${C.primary}` : `1px solid ${C.border}`,
+                borderRadius: 20,
+                padding: "6px 14px",
+                fontSize: 12,
+                fontWeight: 500,
+                fontFamily: SANS,
+                cursor: "pointer",
+                transition: "all 0.12s",
+              }}
+            >
+              {p.label}
+            </button>
+          );
+        })}
+      </div>
+
       {/* Toolbar */}
       <div
         style={{
@@ -400,21 +850,27 @@ export default function RotaPage() {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginRight: "auto" }}>
-          <button
-            onClick={() => setWeekStart((d) => addDays(d, -7))}
-            style={{ background: "none", border: `1px solid ${C.border}`, borderRadius: 6, cursor: "pointer", padding: "4px 8px", fontSize: 13, color: C.muted }}
-          >
-            ‹
-          </button>
+          {rangeMode === "week" && (
+            <button
+              onClick={() => setWeekStart((d) => addDays(d, -7))}
+              style={{ background: "none", border: `1px solid ${C.border}`, borderRadius: 6, cursor: "pointer", padding: "4px 8px", fontSize: 13, color: C.muted }}
+            >
+              ‹
+            </button>
+          )}
           <span style={{ fontFamily: SERIF, fontSize: 17, color: C.text, fontWeight: 500 }}>
-            {formatWeekRange(weekStart)}
+            {rangeMode === "week"
+              ? formatWeekRange(weekStart)
+              : `${new Date(rangeDates.startDate + "T12:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" })} – ${new Date(rangeDates.endDate + "T12:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}`}
           </span>
-          <button
-            onClick={() => setWeekStart((d) => addDays(d, 7))}
-            style={{ background: "none", border: `1px solid ${C.border}`, borderRadius: 6, cursor: "pointer", padding: "4px 8px", fontSize: 13, color: C.muted }}
-          >
-            ›
-          </button>
+          {rangeMode === "week" && (
+            <button
+              onClick={() => setWeekStart((d) => addDays(d, 7))}
+              style={{ background: "none", border: `1px solid ${C.border}`, borderRadius: 6, cursor: "pointer", padding: "4px 8px", fontSize: 13, color: C.muted }}
+            >
+              ›
+            </button>
+          )}
         </div>
 
         {/* Church filter */}
@@ -501,9 +957,19 @@ export default function RotaPage() {
         </div>
       </div>
 
-      {/* Grid */}
+      {/* Grid or MonthlyView */}
       <div style={{ flex: 1, overflow: "auto" }}>
-        {activitiesByChurch.every((g) => g.activities.length === 0) ? (
+        {rangeMode !== "week" ? (
+          <MonthlyView
+            parishId={parish._id}
+            startDate={rangeDates.startDate}
+            endDate={rangeDates.endDate}
+            onSelectWeek={(sunday) => {
+              setWeekStart(sunday);
+              setRangeMode("week");
+            }}
+          />
+        ) : activitiesByChurch.every((g) => g.activities.length === 0) ? (
           <div
             style={{
               display: "flex",
@@ -802,6 +1268,46 @@ export default function RotaPage() {
           if (modalCell) handleAssign(modalCell.activityId, modalCell.date, clergyId);
         }}
         onClose={() => setModalCell(null)}
+      />
+
+      {/* Floating action button */}
+      <button
+        onClick={() => setGenerateOpen(true)}
+        title="Generate rota"
+        style={{
+          position: "fixed",
+          bottom: 28,
+          right: 28,
+          width: 52,
+          height: 52,
+          borderRadius: "50%",
+          background: C.primary,
+          color: "#fff",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: 22,
+          cursor: "pointer",
+          boxShadow: "var(--ordo-shadow-lg)",
+          border: "none",
+          zIndex: 100,
+          transition: "transform 0.15s, box-shadow 0.15s",
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = "translateY(-2px)";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = "translateY(0)";
+        }}
+      >
+        +
+      </button>
+
+      {/* Generate modal */}
+      <GenerateModal
+        open={generateOpen}
+        parishId={parish._id}
+        onClose={() => setGenerateOpen(false)}
       />
     </div>
   );
