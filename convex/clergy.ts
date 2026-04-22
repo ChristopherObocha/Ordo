@@ -119,8 +119,8 @@ export const remove = mutation({
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .first();
 
-    if (!membership || membership.role !== "parish_priest") {
-      throw new Error("Only the parish priest can remove clergy");
+    if (!membership || (membership.role !== "parish_priest" && membership.role !== "administrator")) {
+      throw new Error("Only the parish priest or administrator can remove clergy");
     }
 
     await ctx.db.delete(args.clergyId);
