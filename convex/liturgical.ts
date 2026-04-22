@@ -164,7 +164,7 @@ export const generateLiturgicalYear = action({
       year: args.year,
       locale: args.locale,
     });
-    if (cached) return cached;
+    if (cached) return cached.data;
 
     // 2. Generate with romcal (Node.js runtime required)
     const data = await generateCalendarData(args.year, args.locale);
