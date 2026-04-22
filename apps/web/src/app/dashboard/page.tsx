@@ -1,23 +1,22 @@
 "use client";
 import { useQuery } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
-import { api } from "../../../../convex/_generated/api";
-import { useRouter } from "next/navigation";
+import { api } from "../../../../../convex/_generated/api";
 
-export default function Home() {
+export default function Dashboard() {
   const { signOut } = useAuthActions();
-  const router = useRouter();
   const user = useQuery(api.users.getCurrentUser);
 
   if (user === undefined) return <p>Loading...</p>;
-  if (user === null) return <p>Not logged in</p>;
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen gap-4">
-      <h1 className="text-2xl font-bold">Welcome to Ordo</h1>
-      <p className="text-gray-500">Signed in as {user.email}</p>
+      <h1 className="text-2xl font-bold">Ordo Dashboard</h1>
+      <p className="text-gray-500">
+        Welcome, {user?.name ?? user?.email}
+      </p>
       <button
-        onClick={() => signOut().then(() => router.push("/signin"))}
+        onClick={() => signOut()}
         className="px-6 py-3 bg-black text-white rounded-lg"
       >
         Sign out
