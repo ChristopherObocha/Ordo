@@ -51,6 +51,26 @@ export const create = mutation({
   },
 });
 
+export const getForRange = query({
+  args: {
+    parishId: v.id("parishes"),
+    startDate: v.string(),
+    endDate: v.string(),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("rotas")
+      .withIndex("by_parish", (q) => q.eq("parishId", args.parishId))
+      .filter((q) =>
+        q.and(
+          q.gte(q.field("startDate"), args.startDate),
+          q.lte(q.field("endDate"), args.endDate)
+        )
+      )
+      .collect();
+  },
+});
+
 export const updateStatus = mutation({
   args: {
     rotaId: v.id("rotas"),
