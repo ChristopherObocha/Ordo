@@ -1,26 +1,68 @@
 @import "tailwindcss";
 
+/* Ordo design tokens */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --ordo-bg:               #F8F7F3;
+  --ordo-surface:          #FFFFFF;
+  --ordo-surface2:         #F2F0EB;
+  --ordo-border:           #E2DFD8;
+  --ordo-border2:          #CBC8C0;
+  --ordo-text:             #2C2A27;
+  --ordo-muted:            #6B6660;
+  --ordo-faint:            #9E9A94;
+  --ordo-primary:          #2C2A27;
+  --ordo-primary-hover:    #1A1917;
+  --ordo-satellite:        #EBF0E8;
+  --ordo-satellite-border: #B8CBB0;
+  --ordo-danger:           #8B1A1A;
+  --ordo-danger-bg:        #FDF0F0;
+  --ordo-success:          #2D6A3F;
+  --ordo-success-bg:       #EEF5EE;
+  --ordo-warning:          #7A5C0A;
+  --ordo-warning-bg:       #FDF8EE;
+  --ordo-nav-bg:           #1E1D1A;
+  --ordo-nav-border:       #2A2926;
+  --ordo-shadow-sm:        0 1px 3px rgba(44,42,39,0.08);
+  --ordo-shadow-md:        0 4px 12px rgba(44,42,39,0.10);
+  --ordo-shadow-lg:        0 8px 32px rgba(44,42,39,0.14);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background:      var(--ordo-bg);
+  --color-foreground:      var(--ordo-text);
+  --font-sans:             var(--font-dm-sans);
+  --font-serif:            var(--font-eb-garamond);
+  --font-mono:             var(--font-dm-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+html, body {
+  height: 100%;
+  background: var(--ordo-bg);
+  color: var(--ordo-text);
+}
+
+#__next,
+body > div:first-child {
+  height: 100%;
+}
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #D4D0C8; border-radius: 3px; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.ordo-fade-in {
+  animation: fadeIn 0.18s ease;
 }

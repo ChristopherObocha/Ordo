@@ -127,6 +127,19 @@ export const remove = mutation({
   },
 });
 
+export const setStatus = mutation({
+  args: {
+    clergyId: v.id("clergy"),
+    status: v.union(v.literal("active"), v.literal("inactive")),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+    await ctx.db.patch(args.clergyId, { status: args.status });
+    return args.clergyId;
+  },
+});
+
 export const updateRoles = mutation({
   args: {
     clergyId: v.id("clergy"),
