@@ -47,6 +47,13 @@ export const create = mutation({
   },
 });
 
+export const getById = query({
+  args: { parishId: v.id("parishes") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.parishId);
+  },
+});
+
 export const getMyParish = query({
   args: {},
   handler: async (ctx) => {
