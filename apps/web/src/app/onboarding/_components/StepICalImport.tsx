@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useAction } from "convex/react";
-import { api } from "../../../../../convex/_generated/api";
+import { api } from "../../../../../../convex/_generated/api";
 import { C, SANS, OInput, OButton, Field, StepHeader, StepNav } from "./shared";
 
 type ParsedEventBasic = {

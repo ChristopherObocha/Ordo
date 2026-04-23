@@ -1,8 +1,8 @@
 "use client";
 import { useState } from "react";
 import { useMutation } from "convex/react";
-import { api } from "../../../../../convex/_generated/api";
-import { Id } from "../../../../../convex/_generated/dataModel";
+import { api } from "../../../../../../convex/_generated/api";
+import { Id } from "../../../../../../convex/_generated/dataModel";
 import { C, SANS, SERIF, OSelect, StepHeader, StepNav } from "./shared";
 
 // Local type declarations (mirrors convex/icalImport.ts — not imported directly

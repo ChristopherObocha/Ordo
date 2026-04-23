@@ -1,8 +1,8 @@
 "use client";
 
 import { useQuery } from "convex/react";
-import { api } from "../../../../../convex/_generated/api";
-import { Id } from "../../../../../convex/_generated/dataModel";
+import { api } from "../../../../../../convex/_generated/api";
+import { Id, Doc } from "../../../../../../convex/_generated/dataModel";
 import { use, useMemo } from "react";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
@@ -165,11 +165,11 @@ function RotaView({
   const rows = useMemo(() => {
     if (!assignments || !activities || !clergyList || !churches) return [];
 
-    const actMap  = new Map(activities.map((a) => [a._id, a]));
-    const clerMap = new Map(clergyList.map((c) => [c._id, c]));
-    const churMap = new Map(churches.map((ch) => [ch._id, ch]));
+    const actMap  = new Map((activities as Doc<"activities">[]).map((a) => [a._id, a]));
+    const clerMap = new Map((clergyList as Doc<"clergy">[]).map((c) => [c._id, c]));
+    const churMap = new Map((churches as Doc<"churches">[]).map((ch) => [ch._id, ch]));
 
-    return assignments
+    return (assignments as Doc<"assignments">[])
       .map((asgn) => {
         const activity = actMap.get(asgn.activityId);
         const clergy   = clerMap.get(asgn.clergyId);

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
-import type { Id } from "../../../../../convex/_generated/dataModel";
+import type { Id, Doc } from "../../../../../convex/_generated/dataModel";
 
 import { OnboardingLayout } from "./_components/OnboardingLayout";
 import { PhaseProgress } from "./_components/PhaseProgress";
@@ -180,7 +180,7 @@ export default function OnboardingPage() {
     const clergyById = new Map<string, (typeof clergyList)[number]>();
     for (const c of clergyList) clergyById.set(c._id as unknown as string, c);
 
-    const hydrated: Slot[] = assignments.map((asn) => {
+    const hydrated: Slot[] = (assignments as Doc<"assignments">[]).map((asn) => {
       const act = actById.get(asn.activityId as unknown as string);
       const cl  = clergyById.get(asn.clergyId as unknown as string);
       return {

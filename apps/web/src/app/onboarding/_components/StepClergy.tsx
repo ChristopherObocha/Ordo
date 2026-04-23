@@ -1,8 +1,8 @@
 "use client";
 import { useState } from "react";
 import { useMutation } from "convex/react";
-import { api } from "../../../../../convex/_generated/api";
-import { Id } from "../../../../../convex/_generated/dataModel";
+import { api } from "../../../../../../convex/_generated/api";
+import { Id } from "../../../../../../convex/_generated/dataModel";
 import {
   C, SANS,
   OInput, OSelect, Field, StepHeader, StepNav, OButton,

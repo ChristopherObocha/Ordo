@@ -2,7 +2,7 @@
 import { useQuery, useMutation, useAction } from "convex/react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { api } from "../../../../../../convex/_generated/api";
-import { Id } from "../../../../../../convex/_generated/dataModel";
+import { Id, Doc } from "../../../../../../convex/_generated/dataModel";
 
 // ─── Week helpers ─────────────────────────────────────────────────────────────
 
@@ -124,7 +124,7 @@ type Clergy = {
   type: string;
   status: string;
   roles: string[];
-  email: string;
+  email?: string;
 };
 
 function ClipAvatar({
@@ -490,7 +490,7 @@ function GenerateModal({
     api.rotas.getForRange,
     open ? { parishId, startDate, endDate } : "skip",
   );
-  const hasPublishedOverlap = (overlapRotas ?? []).some((r) => r.status === "published");
+  const hasPublishedOverlap = (overlapRotas as Doc<"rotas">[] ?? []).some((r) => r.status === "published");
 
   const generate = useAction(api.rotaGeneration.generateRota);
 
@@ -775,12 +775,13 @@ export default function RotaPage() {
   }
 
   const isPublished = rota?.status === "published";
-  const activeClergy = clergy.filter((c) => c.status === "active");
+  const activeClergy = (clergy as Doc<"clergy">[]).filter((c) => c.status === "active");
 
   // Group activities by church
-  const activitiesByChurch = churches.map((ch) => ({
+  type ByChurch = { church: Doc<"churches">; activities: Doc<"activities">[] };
+  const activitiesByChurch: ByChurch[] = (churches as Doc<"churches">[]).map((ch) => ({
     church: ch,
-    activities: (activities ?? []).filter((a) => a.churchId === ch._id),
+    activities: (activities as Doc<"activities">[] ?? []).filter((a) => a.churchId === ch._id),
   }));
 
   const cellH = density === "compact" ? 36 : 48;
@@ -890,7 +891,7 @@ export default function RotaPage() {
           }}
         >
           <option value="all">All churches</option>
-          {churches.map((ch) => (
+          {(churches as Doc<"churches">[]).map((ch) => (
             <option key={ch._id} value={ch._id}>{ch.name}</option>
           ))}
         </select>
@@ -1107,7 +1108,7 @@ export default function RotaPage() {
                       const applies = activityAppliesToDay(activity.schedule, dow);
                       const assignment = assignMap.get(`${activity._id}::${dateStr}`);
                       const assignedClergy = assignment
-                        ? clergy.find((c) => c._id === assignment.clergyId)
+                        ? (clergy as Doc<"clergy">[]).find((c) => c._id === assignment.clergyId)
                         : undefined;
                       const isDragOver =
                         dragOver?.activityId === activity._id && dragOver?.date === dateStr;

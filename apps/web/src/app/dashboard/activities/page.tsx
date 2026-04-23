@@ -1,7 +1,7 @@
 "use client";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../../../convex/_generated/api";
-import { Id } from "../../../../../../convex/_generated/dataModel";
+import { Id, Doc } from "../../../../../../convex/_generated/dataModel";
 import { useState } from "react";
 
 const C = {
@@ -412,9 +412,10 @@ export default function ActivitiesPage() {
   }
 
   // Group activities by church
-  const grouped = churches.map((ch) => ({
+  type GroupedChurch = { church: Doc<"churches">; activities: Doc<"activities">[] };
+  const grouped: GroupedChurch[] = (churches as Doc<"churches">[]).map((ch) => ({
     church: ch,
-    activities: activities.filter((a) => a.churchId === ch._id),
+    activities: (activities as Doc<"activities">[]).filter((a) => a.churchId === ch._id),
   }));
 
   return (

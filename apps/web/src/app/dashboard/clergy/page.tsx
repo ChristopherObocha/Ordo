@@ -1,7 +1,7 @@
 "use client";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../../../convex/_generated/api";
-import { Id } from "../../../../../../convex/_generated/dataModel";
+import { Id, Doc } from "../../../../../../convex/_generated/dataModel";
 import { useState } from "react";
 
 const C = {
@@ -144,13 +144,13 @@ export default function ClergyPage() {
   const [deleteId,    setDeleteId]    = useState<Id<"clergy"> | null>(null);
   const [submitting,  setSubmitting]  = useState(false);
 
-  const filtered = (clergy ?? []).filter(
+  const filtered = (clergy as Doc<"clergy">[] ?? []).filter(
     (p) =>
       p.name.toLowerCase().includes(search.toLowerCase()) ||
       p.type.toLowerCase().includes(search.toLowerCase()),
   );
 
-  const detailPerson = detailId ? (clergy ?? []).find((p) => p._id === detailId) : null;
+  const detailPerson = detailId ? (clergy as Doc<"clergy">[] ?? []).find((p) => p._id === detailId) : null;
 
   const handleInvite = async () => {
     if (!parish || !inviteEmail.trim() || !inviteName.trim()) return;
@@ -281,7 +281,7 @@ export default function ClergyPage() {
                   </td>
                 </tr>
               )}
-              {filtered.map((p, i) => (
+              {filtered.map((p: Doc<"clergy">, i: number) => (
                 <tr
                   key={p._id}
                   onClick={() => setDetailId(p._id === detailId ? null : p._id)}
@@ -530,7 +530,7 @@ export default function ClergyPage() {
                   Roles
                 </div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                  {detailPerson.roles.map((r) => (
+                  {detailPerson.roles.map((r: string) => (
                     <span
                       key={r}
                       style={{

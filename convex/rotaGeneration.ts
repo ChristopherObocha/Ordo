@@ -187,7 +187,12 @@ export const generateRota = action({
       parishId: args.parishId,
     });
 
-    const { activities, clergy, availability } = data;
+    const { activities, clergy, availability } = data as {
+      activities: Doc<"activities">[];
+      clergy: Doc<"clergy">[];
+      availability: Doc<"availability">[];
+      rules: Doc<"rules">[];
+    };
 
     // Index availability by clergyId for fast lookup.
     const availabilityByClergy = new Map<string, Doc<"availability">[]>();

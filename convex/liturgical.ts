@@ -87,12 +87,13 @@ export const generateLiturgicalYear = action({
     year: v.number(),
     locale: v.string(),
   },
-  handler: async (ctx, args) => {
+  returns: v.any(),
+  handler: async (ctx, args): Promise<Record<string, LiturgicalDayInfo>> => {
     const cached = await ctx.runQuery(internal.liturgicalCache.getLiturgicalYear, {
       year: args.year,
       locale: args.locale,
     });
-    if (cached) return cached.data;
+    if (cached) return cached.data as Record<string, LiturgicalDayInfo>;
 
     const data = await generateCalendarData(args.year, args.locale);
 
