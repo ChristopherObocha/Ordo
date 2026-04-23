@@ -147,6 +147,14 @@ export default function OnboardingPage() {
     setHydrated(true);
   }, [currentUser, searchParams, hydrated, router]);
 
+  // ─── Restore parishId from DB on load (handles refresh mid-onboarding) ──────
+  const myParish = useQuery(api.parishes.getMyParish);
+  useEffect(() => {
+    if (myParish && !parishId) {
+      setParishId(myParish._id as unknown as string);
+    }
+  }, [myParish, parishId]);
+
   // ─── Load main church id once parishId is known (for activities steps) ──────
   const mainChurch = useQuery(
     api.churches.getMain,
@@ -334,7 +342,7 @@ export default function OnboardingPage() {
         <StepChurches
           key={stepKey}
           parishId={parishId}
-          parishName={mainChurchName || name || ""}
+          parishName={mainChurchName || ""}
           onNext={(mcName) => {
             setMainChurchName(mcName);
             goToStep(3);
@@ -451,7 +459,7 @@ export default function OnboardingPage() {
       content = parishId && rotaId ? (
         <StepFinalize
           key={stepKey}
-          parishName={mainChurchName || name || ""}
+          parishName={mainChurchName || ""}
           parishId={parishId}
           rotaId={rotaId}
           assignedCount={assignedCount}

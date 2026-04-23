@@ -23,8 +23,9 @@ export const create = mutation({
     if (!userId) throw new Error("Not authenticated");
 
     // Create the parish
+    const { membershipRole, ...parishFields } = args;
     const parishId = await ctx.db.insert("parishes", {
-      ...args,
+      ...parishFields,
       createdBy: userId,
     });
 
@@ -40,7 +41,7 @@ export const create = mutation({
     await ctx.db.insert("parishMembers", {
       parishId,
       userId,
-      role: args.membershipRole ?? "parish_priest",
+      role: membershipRole ?? "parish_priest",
     });
 
     return parishId;

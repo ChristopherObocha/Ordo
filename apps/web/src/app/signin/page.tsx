@@ -1,11 +1,13 @@
 "use client";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 type Flow = "signIn" | "signUp" | "otp";
 
 export default function SignIn() {
   const { signIn } = useAuthActions();
+  const router = useRouter();
   const [flow, setFlow] = useState<Flow>("signIn");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -19,6 +21,7 @@ export default function SignIn() {
     setLoading(true);
     try {
       await signIn("password", { email, password, name, flow: flow as "signIn" | "signUp" });
+      router.replace("/");
     } catch (e: unknown) {
       const err = e instanceof Error ? e : new Error(String(e));
       setError(err.message);
@@ -46,6 +49,7 @@ export default function SignIn() {
     setLoading(true);
     try {
       await signIn("resend-otp", { email, code });
+      router.replace("/");
     } catch (e: unknown) {
       const err = e instanceof Error ? e : new Error(String(e));
       setError(err.message);

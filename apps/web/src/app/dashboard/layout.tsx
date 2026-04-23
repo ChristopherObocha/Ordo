@@ -1,10 +1,10 @@
 "use client";
 import { useQuery } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { api } from "../../../../../convex/_generated/api";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const NAV = [
   { href: "/dashboard/rota",       label: "Rota Grid",   icon: "☰" },
@@ -14,9 +14,19 @@ const NAV = [
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const user = useQuery(api.users.getCurrentUser);
   const parish = useQuery(api.parishes.getMyParish);
   const { signOut } = useAuthActions();
   const [collapsed, setCollapsed] = useState(false);
+
+  useEffect(() => {
+    if (user === undefined || parish === undefined) return;
+    if (user === null) { router.replace("/signin"); return; }
+    if (!parish || user.onboardingPhase !== "complete") {
+      router.replace("/onboarding");
+    }
+  }, [user, parish, router]);
 
   const navW = collapsed ? 52 : 216;
 

@@ -36,6 +36,10 @@ export function StepChurches({ parishId, parishName, onNext, onBack }: Props) {
   const [saving, setSaving] = useState(false);
   const createChurch = useMutation(api.churches.create);
 
+  console.log("parishId", parishId);
+  console.log("parishName", parishName);
+  console.log("mainChurchName", mainChurchName);
+
   const addSatellite = () => {
     setSatellites((prev) => [
       ...prev,
